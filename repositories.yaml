@@ -1,0 +1,12 @@
+# code: language=helm
+{{ if has (env "UPDATE_REPOS" | default "no") (list "y" "Y" "yes" "YES" "Yes" "True" "true") }}
+repositories:
+  - name: dysnix
+    url: https://dysnix.github.io/charts/
+  - name: ingress-nginx
+    url: https://kubernetes.github.io/ingress-nginx
+  - name: elastic
+    url: https://helm.elastic.co
+  - name: jetstack
+    url: https://charts.jetstack.io
+{{- end }}

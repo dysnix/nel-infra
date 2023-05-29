@@ -1,0 +1,102 @@
+{{- $port := .Values | get "filebeat-port" (printf "8080") -}}
+{{- $esHosts := .Values | get "esHosts" (printf "http://elasticsearch-master.es:9200") -}}
+
+daemonset:
+  enabled: false
+replicas: 2
+deployment:
+  enabled: true
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 100Mi
+    limits:
+      cpu: null
+      memory: 300Mi
+
+  filebeatConfig:
+    filebeat.yml: |
+      queue.disk:
+      # we need to keep logs for ~ 5 minutes to handle ES restarts.
+        max_size: 1GiB
+      filebeat.inputs:
+      - type: http_endpoint
+        enabled: true
+        listen_address: 0.0.0.0
+        listen_port: {{ $port }}
+        response_code: 200
+        response_body: '{"message": "success"}'
+        url: "/"
+      output.elasticsearch:
+        host: '${NODE_NAME}'
+        bulk_max_size: 1024
+        hosts: '${ELASTICSEARCH_HOSTS:{{ $esHosts }}}'
+        index: "nel-%{[agent.version]}-%{+yyyy.MM.dd}"
+      setup:
+        dashboards:
+          enabled: false
+        kibana:
+          host: http://kibana-kibana.es:5601
+        ilm:
+          enabled: auto
+          rollover_alias: "nel-logs"
+          pattern: "-000001"
+          policy_name: "nel-logs"
+          policy_file: "ilm_policy.json"
+          overwrite: true
+        template:
+          name: "nel-logs-template"
+          pattern: "nel-logs-*"
+          overwrite: true
+          settings:
+            index:
+              number_of_shards: 1
+              number_of_replicas: 0
+
+    ilm_policy.json: |
+      {
+        "policy": {
+          "phases": {
+            "hot": {
+              "actions": {
+                "rollover": {
+                  "max_age": "1d",
+                  "max_primary_shard_size": "2GB",
+                  "max_docs": "5242880"
+                },
+                "set_priority" : {
+                   "priority": 100
+                }
+              }
+            },
+            "warm": {
+              "min_age": "30h",
+              "actions": {
+                "forcemerge" : {
+                   "max_num_segments": 1
+                },
+                "readonly" : { },
+                "set_priority" : {
+                   "priority": 50
+                }
+              }
+            },
+            "delete": {
+              "min_age": "32d",
+              "actions": {
+                "delete": {}
+              }
+            }
+          }
+        }
+      }
+
+
+#resources:
+#  requests:
+#    cpu: "100m"
+#    memory: "100Mi"
+#  limits:
+#    cpu: "1000m"
+#    memory: "300Mi"
+

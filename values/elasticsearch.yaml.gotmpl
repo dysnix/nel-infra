@@ -1,0 +1,26 @@
+replicas: 1
+# disable PDB with 1 node
+maxUnavailable: 0
+#minimumMasterNodes: 1
+
+volumeClaimTemplate:
+  storageClassName: "premium-rwo"
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: "20Gi"
+
+antiAffinity: soft
+# readinnes check protocol
+protocol: http
+# change healthcheck to yellow with one node
+clusterHealthCheckParams: "wait_for_status=yellow&timeout=1s"
+
+esConfig:
+  elasticsearch.yml: |
+    xpack.monitoring.collection.enabled: true
+    xpack.security.enabled: false
+    xpack.security.transport.ssl.enabled: false
+    xpack.security.http.ssl.enabled: false
+    indices.lifecycle.poll_interval: 1m
+

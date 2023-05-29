@@ -1,0 +1,65 @@
+templates:
+  _default:
+    createNamespace: true
+    missingFileHandler: Debug
+    secrets:
+      - "secrets/{{`{{ .Release.Name }}`}}.yaml"
+    valuesTemplate:
+      - "values/{{`{{ base .Release.Chart }}`}}.yaml.gotmpl"
+      - "values/{{`{{ .Release.Name }}`}}.yaml.gotmpl"
+
+
+  raw:
+    inherit:
+      - template: _default
+    chart: dysnix/raw
+    version: 0.3.1
+    valuesTemplate:
+      - "values/raw-{{`{{ .Release.Name }}`}}.yaml.gotmpl"
+      - "values/raw-{{`{{ .Release.Name }}`}}.yaml"
+      - "./values/{{`{{ .Release.Name }}`}}.yaml"
+
+  basic-auth:
+    inherit:
+      - template: raw
+    valuesTemplate:
+      - "values/raw-basic-auth.yaml"
+
+  ingress-nginx:
+    inherit:
+      - template: _default
+    chart: ingress-nginx/ingress-nginx
+    version: 4.4.0
+
+  cert-manager:
+    inherit:
+      - template: _default
+    chart: jetstack/cert-manager
+    version: v1.9.1
+    hooks:
+      - events: ["presync"]
+        command: kubectl
+        args: [ "replace", "--force", "--validate=false", "-f", "https://github.com/jetstack/cert-manager/releases/download/v1.9.1/cert-manager.crds.yaml" ]
+      - events: [ "postsync" ]
+        showlogs: false
+        command: kubectl
+        args: [ "--context", "{{`{{.Release.KubeContext}}`}}", "apply", "-f", "values/cluster-issuers.yaml" ]
+
+  elasticsearch:
+    inherit:
+      - template: _default
+    chart: elastic/elasticsearch
+    version: ~7.17.0
+
+  kibana:
+    inherit:
+      - template: _default
+    chart: elastic/kibana
+    version: ~7.17.0
+
+  filebeat-nel:
+    inherit:
+      - template: _default
+    chart: elastic/filebeat
+    version: ~7.17.0
+

@@ -1,0 +1,42 @@
+{{- $fqdn := .Values | get "filebeat_nel_fqdn" (printf "nel.%s" .Values.stageDomain) -}}
+{{- $svc_name := .Values | get "filebeat_nel_svc_name" (printf "filebeat-nel-svc" ) -}}
+{{- $svc_port := .Values | get "filebeat_port" (printf "8080" ) -}}
+templates:
+  - | 
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      annotations:
+        nginx.ingress.kubernetes.io/configuration-snippet: |   
+          proxy_set_header Content-Type "application/json";
+        cert-manager.io/cluster-issuer: letsencrypt-http01-prod
+        nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "5"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "20"
+        nginx.ingress.kubernetes.io/proxy-next-upstream: "error timeout non_idempotent"
+        nginx.ingress.kubernetes.io/load-balance: "ewma"
+        nginx.ingress.kubernetes.io/cors-allow-headers: "DNT, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range"
+        nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+        nginx.ingress.kubernetes.io/cors-allow-methods: "POST, OPTIONS"
+        nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+        nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length,Content-Range"
+        nginx.ingress.kubernetes.io/cors-max-age: "1728000"
+        nginx.ingress.kubernetes.io/enable-cors: "true"
+      name: {{ .Release.Name }}
+    spec:
+      ingressClassName: nginx
+      rules:
+      - host: {{ $fqdn }}
+        http:
+          paths:
+          - backend:
+              service:
+                name: {{ $svc_name }}
+                port:
+                  number: {{ $svc_port }}
+            path: /
+            pathType: ImplementationSpecific
+      tls:
+      - hosts:
+        - {{ $fqdn }}
+        secretName: {{ $fqdn }}

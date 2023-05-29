@@ -1,0 +1,70 @@
+# code: language=helm
+environments:
+  default:
+    values:
+      - stageDomain: example.dysnix.com
+        filebeat_port: 8080
+        filebeat_nel_fqdn: nel.example.com
+        filebeat_nel_svc_name: filebeat-nel-svc
+
+---
+bases:
+  - repositories.yaml
+  - helm-defaults.yaml
+  - templates.yaml
+
+releases:
+  - name: cert-manager
+    namespace: cert-manager
+    inherit:
+      - template: cert-manager
+
+  - name: ingress-nginx
+    namespace: ingress-nginx
+    inherit:
+      - template: ingress-nginx
+
+  - name: elasticsearch
+    namespace: es
+    createNamespace: true
+    inherit:
+      - template: elasticsearch
+
+  - name: kibana
+    namespace: es
+    createNamespace: true
+    inherit:
+      - template: kibana
+
+    needs:
+      - kibana.{{ $.StateValues.stageDomain }}-basic-auth
+
+  - name: kibana.{{ $.StateValues.stageDomain }}-basic-auth
+    namespace: es
+    createNamespace: true
+    inherit:
+      - template: basic-auth
+
+
+  - name: filebeat-nel
+    namespace: nel
+    inherit:
+      - template: filebeat-nel
+
+    needs:
+      - filebeat-nel-svc
+      - filebeat-nel-ingress
+
+  - name: filebeat-nel-ingress
+    namespace: nel
+    inherit:
+      - template: raw
+    needs:
+      - filebeat-nel-svc
+
+  - name: {{ $.StateValues.filebeat_nel_svc_name }}
+    namespace: nel
+    inherit:
+      - template: raw
+
+

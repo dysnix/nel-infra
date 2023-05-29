@@ -1,0 +1,19 @@
+{{- $port := .Values | get "filebeat_port" (printf "8080") -}}
+templates:
+  - |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: {{ .Release.Name }}
+    spec:
+      internalTrafficPolicy: Cluster
+      publishNotReadyAddresses: true
+      ports:
+      - name: http
+        port: {{ $port }}
+        protocol: TCP
+        targetPort: {{ $port }}
+      selector:
+        app: filebeat-nel-filebeat
+        release: filebeat-nel
+      type: ClusterIP

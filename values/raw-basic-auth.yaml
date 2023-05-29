@@ -1,0 +1,10 @@
+templates:
+  - |
+    apiVersion: v1
+    data:
+      {{/* htpasswd is available since helm@3.2.0 */}}
+      auth: {{ (htpasswd .Values.http_auth.user .Values.http_auth.password) | b64enc | quote }}
+    kind: Secret
+    metadata:
+      name: {{ .Release.Name }}
+    type: Opaque
